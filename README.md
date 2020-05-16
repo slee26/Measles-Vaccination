@@ -1,4 +1,3 @@
-# myrepo
-testing my setup
-This is a practice line from RStudio
-### I a do not have a partner for this problem set.
+# Global Measles Vaccination Analysis
+This project was submitted as a final project for SDS192 course at Smith College.
+The website to the final analysis is : 
