@@ -1,0 +1,254 @@
+---
+title: "Measles Vaccination Analysis"
+author: "Su Been Lee, Nancy Jung, Nouhaila Norredine"
+date: "Last updated on `r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    df_print: kable
+---
+
+<!--
+Comments in HTML are like this! 
+-->
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+# Set R chunk default options:
+# -do not output all R messages in html report
+# -do not output all R warnings in html report
+# -set default figure widths and heights
+knitr::opts_chunk$set(
+  message = FALSE, warning = FALSE, fig.width = 16/2, fig.height = 9/2
+)
+```
+# __An even closer look at Measles Vaccines__
+
+
+## MCV1 and measles cases
+
+Here we will be comparing MCV1 vaccination rates to measles cases, GDP of countries, and Measles-containing-vaccine second dose (MCV2) immunization rates.^[World Health Organization Immunization Monitoring,https://www.who.int/immunization/monitoring_surveillance/burden/vpd/surveillance_type/active/measles_monthlydata/en/]
+
+The first visualization is a static choropleth map generated with data from UNICEF of the 2018 MCV1 vaccination rates across the world. The map gives a clear, immediate visual of how well a country is vaccinated against measles, with the colors ranging in a gradient from red (low vaccination rates) to blue (high vaccination rates). No countries had vaccination rates of 100% or 0%. Some areas of concern include the Middle East and Southeast Asia. Some areas of high concern seems to be in Africa, which may be due to a structural issue. It is interesting to note that are some areas with missing data, most notably the U.S.
+
+```{r, echo = FALSE}
+library(tidyverse)
+library(leaflet)
+library(sf)
+library(dplyr)
+library(readxl)
+library(scales)
+
+MCV1_2018 <- read_excel('MCV1_2018.xlsx')
+MCV2_2018 <- read_excel('MCV2_2018.xlsx')
+```
+
+
+```{r, echo = FALSE}
+#Select necessary variables
+MCV1 <- MCV1_2018 %>% 
+  select("unicef_region", "iso3", "country", "2018") %>% 
+  rename(MCV1=`2018`)
+
+#renaming values
+MCV1$country[which(MCV1$country == "United States")] = "USA"
+MCV1$country[which(MCV1$country == "Iran (Islamic Republic of)")] = "Iran"
+MCV1$country[which(MCV1$country == "Bolivia (Plurinational State of)")] = "Bolivia"
+MCV1$country[which(MCV1$country == "Venezuela (Bolivarian Republic of)")] = "Venezuela"
+MCV1$country[which(MCV1$country == "Russian Federation")] = "Russia"
+MCV1$country[which(MCV1$country == "Cote d'Ivoire")] = "Ivory Coast"
+MCV1$country[which(MCV1$country == "Eswatini")] = "Swaziland"
+MCV1$country[which(MCV1$country == "United Kingdom")] = "UK"
+MCV1$country[which(MCV1$country == "Czechia")] = "Czech Republic"
+MCV1$country[which(MCV1$country == "Lao People's Democratic Republic")] = "Laos"
+MCV1$country[which(MCV1$country == "Viet Nam")] = "Vietnam"
+MCV1$country[which(MCV1$country == "Republic of Korea")] = "South Korea"
+MCV1$country[which(MCV1$country == "Democratic People's Republic of Korea")] = "North Korea"
+MCV1$country[which(MCV1$country == "Guyana")] = "French Guiana"
+MCV1$country[which(MCV1$country == "Micronesia (Federated States of)")] = "Micronesia"
+MCV1$country[which(MCV1$country == "Syrian Arab Republic")] = "Syria"
+MCV1$country[which(MCV1$country == "United Republic of Tanzania")] = "Tanzania"
+MCV1$country[which(MCV1$country == "Czechia")] = "Czech Republic"
+MCV1$country[which(MCV1$country == "Congo")] = "Republic of Congo"
+
+
+world_map <-  maps::map("world", plot = FALSE, fill = TRUE)
+# Convert maps package map object to sf object using st_as_sf() again:
+world_sf <- world_map %>%
+  sf::st_as_sf(crs = 4326)
+#Data wrangling new data set with locations
+MCV1_world<- world_sf %>% 
+  left_join(MCV1, by = c("ID" = "country"))
+theme_bare <- theme(
+  axis.line = element_blank(), 
+  axis.text.x = element_blank(), 
+  axis.text.y = element_blank(),
+  axis.ticks = element_blank(), 
+  axis.title.x = element_blank(), 
+  axis.title.y = element_blank(),
+  legend.text=element_text(size=7),
+  legend.title=element_text(size=8),
+  panel.background = element_blank(),
+  panel.border = element_rect(colour = "gray", fill=NA, size=0.5))
+
+ggplot(data = MCV1_world) +
+  geom_sf(aes(fill = MCV1), size = 0.2) + 
+  scale_fill_gradient(high = "#56B1F7", low = "#e34a33", na.value = "white")+
+  guides(fill=guide_colorbar(title="MCV1 Vaccination Rates 2018")) + 
+  labs(title = "Vaccination Coverage Rates of the MCV1 Vaccine 2018",
+    subtitle = "Data from the UNICEF")  + theme_bare
+#Datawrangling for MCV2 visualization
+MCV2 <- MCV2_2018 %>% 
+  select( "country", "vaccine")
+world_map <-  maps::map("world", plot = FALSE, fill = TRUE)
+
+#renaming values
+MCV2$country[which(MCV2$country == "United States")] = "USA"
+MCV2$country[which(MCV2$country == "Iran (Islamic Republic of)")] = "Iran"
+MCV2$country[which(MCV2$country == "Bolivia (Plurinational State of)")] = "Bolivia"
+MCV2$country[which(MCV2$country == "Venezuela (Bolivarian Republic of)")] = "Venezuela"
+MCV2$country[which(MCV2$country == "Russian Federation")] = "Russia"
+MCV2$country[which(MCV2$country == "Cote d'Ivoire")] = "Ivory Coast"
+MCV2$country[which(MCV2$country == "Eswatini")] = "Swaziland"
+MCV2$country[which(MCV2$country == "United Kingdom")] = "UK"
+MCV2$country[which(MCV2$country == "Czechia")] = "Czech Republic"
+MCV2$country[which(MCV2$country == "Lao People's Democratic Republic")] = "Laos"
+MCV2$country[which(MCV2$country == "Viet Nam")] = "Vietnam"
+MCV2$country[which(MCV2$country == "Republic of Korea")] = "South Korea"
+MCV2$country[which(MCV2$country == "Democratic People's Republic of Korea")] = "North Korea"
+MCV2$country[which(MCV2$country == "Guyana")] = "French Guiana"
+MCV2$country[which(MCV2$country == "Micronesia (Federated States of)")] = "Micronesia"
+MCV2$country[which(MCV2$country == "Syrian Arab Republic")] = "Syria"
+MCV2$country[which(MCV2$country == "United Republic of Tanzania")] = "Tanzania"
+MCV2$country[which(MCV2$country == "Czechia")] = "Czech Republic"
+MCV2$country[which(MCV2$country == "Congo")] = "Republic of Congo"
+
+
+# Convert maps package map object to sf object using st_as_sf() again:
+world_sf <- world_map %>%
+  sf::st_as_sf(crs = 4326)
+#Data wrangling new data set with locations
+MCV2_world<- world_sf %>% 
+  left_join(MCV2, by = c("ID" = "country"))
+# visulaization of chlorpleth map to show measle outbreaks
+measlescases <- read_excel("measlescases.xlsx") %>%
+  filter(Year == "2018") %>%
+  mutate(TotalCases = as.numeric(January) + as.numeric(February) + as.numeric(March) + as.numeric(April) + as.numeric(May) + as.numeric(June) + as.numeric(July) + as.numeric(August) + as.numeric(September) + as.numeric(October) + as.numeric(November) + as.numeric(December)) %>%
+  select("Region", "Country", "TotalCases")
+
+#renaming values
+measlescases$Country[which(measlescases$Country == "United States of America")] = "USA"
+measlescases$Country[which(measlescases$Country == "Iran (Islamic Republic of)")] = "Iran"
+measlescases$Country[which(measlescases$Country == "Bolivia (Plurinational State of)")] = "Bolivia"
+measlescases$Country[which(measlescases$Country == "Venezuela (Bolivarian Republic of)")] = "Venezuela"
+measlescases$Country[which(measlescases$Country == "Russian Federation")] = "Russia"
+measlescases$Country[which(measlescases$Country == "Cote d'Ivoire")] = "Ivory Coast"
+measlescases$Country[which(measlescases$Country == "Eswatini")] = "Swaziland"
+measlescases$Country[which(measlescases$Country == "United Kingdom")] = "UK"
+measlescases$Country[which(measlescases$Country == "Czechia")] = "Czech Republic"
+measlescases$Country[which(measlescases$Country == "Lao People's Democratic Republic")] = "Laos"
+measlescases$Country[which(measlescases$Country == "Viet Nam")] = "Vietnam"
+measlescases$Country[which(measlescases$Country == "Republic of Korea")] = "South Korea"
+measlescases$Country[which(measlescases$Country == "Democratic People's Republic of Korea")] = "North Korea"
+measlescases$Country[which(measlescases$Country == "Guyana")] = "French Guiana"
+measlescases$Country[which(measlescases$Country == "Micronesia (Federated States of)")] = "Micronesia"
+measlescases$Country[which(measlescases$Country == "Syrian Arab Republic")] = "Syria"
+measlescases$Country[which(measlescases$Country == "United Republic of Tanzania")] = "Tanzania"
+measlescases$Country[which(measlescases$Country == "Czechia")] = "Czech Republic"
+measlescases$Country[which(measlescases$Country == "Congo")] = "Republic of Congo"
+
+measles_world <- world_sf %>% 
+  left_join(measlescases, by = c("ID" = "Country"))
+ggplot(data = measles_world) +
+  geom_sf(aes(fill = TotalCases), size = 0.2) + 
+  scale_fill_gradient(high = "#756bb1", low = "#bcbddc", na.value = "white")+
+  guides(fill=guide_colorbar(title="Number of Cases")) + 
+  labs(title = "Measle Outbreak Cases 2018",
+    subtitle = "Data from the World Health Organization (WHO)")  + theme_bare
+```
+
+This static choropleth map adds another layer to the story in that it shows the number of measles cases in 2018 as provided by the World Health Organization. It is interesting to see the physical manifestation of the relationship between measles cases and the rates of vaccination. The countries are filled with a gradient from light to darker purple indicating the number of measles cases. While ideally a 100% immunization coverage is encouraged for herd immunity, looking at the map of measles outbreaks by country, there does not seem to be a distinct relationship between low vaccination rates and large numbers of measles cases. Regions in Africa had some of the lowest vaccination rates but did not have correspondingly high numbers of cases. The same can be said for the Middle East and Southeast Asia. Looking at the map we can see that India, which had an intermediate - high vaccination rate, has among the highest number of cases. Thus, looking at the two choropleth maps, it is hard to establish causality or a relationship between MCV1 immunization rates and measles cases.
+
+
+## Vaccine rates and GDP 
+
+Taking the world economy into consideration, the relationship between GDP of individual countries and their vaccination rates for MCV1 is illustrated through our faceted scatter plot. The scatter plots are divided into regions of the world: Africa and the Middle East, Asia, Europe and Central Asia, Latin America and Caribbean, and North America. It is clear that for all the regions, excluding North America, the relationship between GDP and vaccination rates is fairly positive. Vaccination rate for MCV1 increases as GDP increases. Looking at the spread of the points, Africa and Middle East and Asia show the most variability in vaccination rates among all the regions. It is difficult to come to any clear conclusion for the North America region it only includes one point, which represents Canada.
+
+
+```{r, echo = FALSE}
+#Visualization 2: MCV1 and GDP Across Region 
+#Datawrangling and visualization of MCV1 vaccination rate vs GDP
+world_gdp <- read_excel("countrygdp.xls") %>% 
+  rename(`2018_GDP`=`2018`)
+world_gdp <- world_gdp %>% 
+  select("Country_Name", "2018_GDP")
+
+#renaming values in world_gdp
+world_gdp$Country_Name[which(world_gdp$Country_Name == "United States")] = "USA"
+world_gdp$Country_Name[which(world_gdp$Country_Name == "Korea, Rep.")] = "South Korea"
+world_gdp$Country_Name[which(world_gdp$Country_Name == "Korea, Dem. People’s Rep.")] = "North Korea"
+world_gdp$Country_Name[which(world_gdp$Country_Name == "Micronesia, Fed. Sts.")] = "Micronesia"
+world_gdp$Country_Name[which(world_gdp$Country_Name == "Cote d'Ivoire")] = "Ivory Coast"
+world_gdp$Country_Name[which(world_gdp$Country_Name == "Syrian Arab Republic")] = "Syria"
+world_gdp$Country_Name[which(world_gdp$Country_Name == "Lao PDR")] = "Laos"
+world_gdp$Country_Name[which(world_gdp$Country_Name == "Congo, Rep.")] = "Republic of Congo"
+world_gdp$Country_Name[which(world_gdp$Country_Name == "Guyana")] = "French Guiana"
+world_gdp$Country_Name[which(world_gdp$Country_Name == "United Kingdom")] = "UK"
+world_gdp$Country_Name[which(world_gdp$Country_Name == "Venezuela, RB")] = "Venezuela"
+world_gdp$Country_Name[which(world_gdp$Country_Name == "Russian Federation")] = "Russia"
+world_gdp$Country_Name[which(world_gdp$Country_Name == "Iran, Islamic Rep.")] = "Iran"
+world_gdp$Country_Name[which(world_gdp$Country_Name == "Eswatini")] = "Swaziland"
+
+MCV1_worldGDP <- MCV1_world %>% 
+  inner_join(world_gdp, by = c("ID" = "Country_Name")) %>%
+  mutate(NewRegion = ifelse(unicef_region %in% c("South Asia", "East Asia & Pacific"), "Asia", ifelse(unicef_region %in% c("Eastern & Southern Africa", "Middle East & North Africa", "West & Central Africa"), "Africa and Middle East", ifelse(unicef_region %in% c("Eastern Europe & Central Asia", "Western Europe"), "Europe and Central Asia", ifelse(unicef_region %in% c("Latin America & Caribbean"), "Latin America & Caribbean", ifelse(unicef_region %in% c("North America"), "North America", "Undefined Region")))))) %>%
+  filter(NewRegion != "Undefined Region")
+
+
+ggplot(data = MCV1_worldGDP, 
+      mapping = aes(x = `MCV1`, y = `2018_GDP`, color =
+      NewRegion)) + geom_point() + scale_y_log10(label=dollar)+ geom_smooth(method = "lm", se=FALSE) + labs(x = "Vaccination Rate", y = "GDP per Capita", title = "MCV1 Vaccination Rates in Relation to GDP per Capita", color = "Unicef Regions") + facet_wrap(~ NewRegion) 
+
+```
+
+## MCV1 and MCV2 Rates Comparison 
+
+As the measles vaccine requires two dosages, MCV1 and MCV2, we wanted to see the vaccination rates for two dosages.Through the bar plot, we can see that there is difference in vaccination rates between the two dosages. For all the regions, vaccination rate for MCV1 is higher than their vaccination rate for MCV2. This gives insight to the fact that although the first dosage is provided, the second dosage is not equally distributed to complete the full vaccination for measles. From our bar plot, we can see that Latin America & Caribbean, Asia, Africa and the Middle East have great differences in vaccination rates between MCV1 and MCV2.
+
+
+```{r}
+#Visualization 3: Bar plot of mCV1 and MCV2 
+
+MCV2 <- MCV2_2018 %>% 
+  select("country","2018") %>% 
+  rename(MCV2 =`2018`)
+MCV1 <- MCV1 %>%  
+  select ("unicef_region","iso3", "country", "MCV1")
+  
+MCV1_2 <- MCV1  %>% 
+  inner_join(MCV2, by = "country") %>%
+  #Converting to tidy 
+  gather(c(MCV1,MCV2), key= "Type", value= "Percent", -country, -unicef_region, -iso3) %>% 
+  
+  #Creating new regions 
+  mutate(NewRegion = ifelse(unicef_region %in% c("South Asia", "East Asia & Pacific"),"Asia", ifelse(unicef_region %in% c("Eastern & Southern Africa", "Middle East & North Africa", "West & Central Africa"), "Africa and Middle East", ifelse(unicef_region %in% c("Eastern Europe & Central Asia", "Western Europe"), "Europe and Central Asia", ifelse(unicef_region %in% c("Latin America & Caribbean"), "Latin America & Caribbean", ifelse(unicef_region %in% c("North America"), "North America", "Undefined Region")))))) %>%
+  filter(NewRegion != "Undefined Region") %>% 
+  #Averaging percentage of vaccination by new regions 
+  group_by(NewRegion, Type) %>% 
+  summarize(avg_region = mean(Percent, na.rm = TRUE))
+
+format(round(MCV1_2$avg_region, 2), nsmall = 2)
+
+#plotting 
+ggplot(data = MCV1_2, 
+       mapping = aes(x = NewRegion, 
+                     y= factor(avg_region, fill = Type)) + 
+  geom_col(position="dodge") + 
+  coord_flip() + 
+#  guides(fill = guide_legend(reverse = TRUE)) + 
+  labs(x = "Region", 
+       y = "Average Vaccination Rate", 
+       title = "Comparing Average Vaccination Rates for MCV1 and MCV2", 
+       subtitle = "Data from the UNICEF"))
+
+```

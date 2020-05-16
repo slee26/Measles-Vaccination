@@ -1,0 +1,125 @@
+---
+title: "SDS192 Final | Global Health | Measles Vaccination"
+author: "Su Been Lee, Nancy Jung, Nouhaila Norredine"
+date: "Last updated on `r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    df_print: kable
+---
+
+<!--
+Comments in HTML are like this! 
+-->
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+# Set R chunk default options:
+# -do not output all R messages in html report
+# -do not output all R warnings in html report
+# -set default figure widths and heights
+knitr::opts_chunk$set(
+  message = FALSE, warning = FALSE, fig.width = 16/2, fig.height = 9/2
+)
+```
+# __Is the world safe from measles? A look at how well countries are vaccinated across the world.__
+
+## Measles-containing-vaccine first-dose (MCV1) immunization rates across the World
+
+Public health interventions often use immunization through vaccines as a cost efficient way of preventing the spread of deadly virus across the world such as measles. “Deaths from measles, a major child killer, declined by 80 per cent worldwide between 2000 and 2017 preventing an estimated 21.1 million deaths”^[UNICEF Data, Immunization July 2019,https://data.unicef.org/topic/child-health/immunization/]. Looking at the percentage of population who have received a measles first dose vaccine (MCV1) can be used as a tool for better understanding their public health policies and how accessible immunization services are.  
+
+This Leaflet interactive choropleth map is an interactive visualization of MCV1 vaccines rates across the world.  By putting the cursor on top of each country, one can tell which country it is. This interactive map shows a pretty good vaccination rate all across however, we can see that central Africa has low vaccination rates with countries like Chad with a vaccination rate as low as 37%. 
+
+You can visit the "more info" tab where we would be diving into possible relationship between GDP and vaccinations, as well as looking at the second dose measles vaccine (MCV2).
+
+
+```{r, echo = FALSE}
+library(tidyverse)
+library(leaflet)
+library(sf)
+library(dplyr)
+library(readxl)
+library(scales)
+
+MCV1_2018 <- read_excel('MCV1_2018.xlsx')
+MCV2_2018 <- read_excel('MCV2_2018.xlsx')
+
+```
+
+
+
+```{r}
+MCV1 <- MCV1_2018 %>% 
+  select("unicef_region", "iso3", "country", "2018") %>% 
+  rename(MCV1=`2018`)
+
+world_map <-  maps::map("world", plot = FALSE, fill = TRUE)
+# Convert maps package map object to sf object using st_as_sf() again:
+world_sf <- world_map %>%
+  sf::st_as_sf(crs = 4326)
+
+# Rename values in MCV1 for United States(USA), Iran (Islamic Republic of)	(Iran), Bolivia (Plurinational State of) (Bolivia), 
+#  Venezuela (Bolivarian Republic of) (Venezuela), 	Russian Federation (Russia), Cote d'Ivoire (Ivory Coast), 	Syrian Arab Republic (Syria), United Republic of Tanzania (Tanzania), Congo (Republic of Congo), Eswatini (Swaziland), United Kingdom (UK), Czechia (Czech Republic), Lao People's Democratic Republic (Laos), Viet Nam (Vietnam), Republic of Korea (South Korea), Democratic People's Republic of Korea (North Korea), Guyana (French Guiana), Micronesia (Federated States of) (Micronesia)
+MCV1$country[which(MCV1$country == "United States")] = "USA"
+MCV1$country[which(MCV1$country == "Iran (Islamic Republic of)")] = "Iran"
+MCV1$country[which(MCV1$country == "Bolivia (Plurinational State of)")] = "Bolivia"
+MCV1$country[which(MCV1$country == "Venezuela (Bolivarian Republic of)")] = "Venezuela"
+MCV1$country[which(MCV1$country == "Russian Federation")] = "Russia"
+MCV1$country[which(MCV1$country == "Cote d'Ivoire")] = "Ivory Coast"
+MCV1$country[which(MCV1$country == "Eswatini")] = "Swaziland"
+MCV1$country[which(MCV1$country == "United Kingdom")] = "UK"
+MCV1$country[which(MCV1$country == "Czechia")] = "Czech Republic"
+MCV1$country[which(MCV1$country == "Lao People's Democratic Republic")] = "Laos"
+MCV1$country[which(MCV1$country == "Viet Nam")] = "Vietnam"
+MCV1$country[which(MCV1$country == "Republic of Korea")] = "South Korea"
+MCV1$country[which(MCV1$country == "Democratic People's Republic of Korea")] = "North Korea"
+MCV1$country[which(MCV1$country == "Guyana")] = "French Guiana"
+MCV1$country[which(MCV1$country == "Micronesia (Federated States of)")] = "Micronesia"
+MCV1$country[which(MCV1$country == "Syrian Arab Republic")] = "Syria"
+MCV1$country[which(MCV1$country == "United Republic of Tanzania")] = "Tanzania"
+MCV1$country[which(MCV1$country == "Czechia")] = "Czech Republic"
+MCV1$country[which(MCV1$country == "Congo")] = "Republic of Congo"
+
+
+#Data wrangling new data set with locations
+MCV1_world<- world_sf %>% 
+  left_join(MCV1, by = c("ID" = "country"))
+theme_bare <- theme(
+  axis.line = element_blank(), 
+  axis.text.x = element_blank(), 
+  axis.text.y = element_blank(),
+  axis.ticks = element_blank(), 
+  axis.title.x = element_blank(), 
+  axis.title.y = element_blank(),
+  legend.text=element_text(size=7),
+  legend.title=element_text(size=8),
+  panel.background = element_blank(),
+  panel.border = element_rect(colour = "gray", fill=NA, size=0.5))
+  
+bins <- c(10,20,30,40,50,60,70,80,90,100)
+pal <- colorBin("YlOrRd", domain = MCV1_world$MCV1, bins = bins)
+leaflet(MCV1_world) %>%
+  addTiles() %>%
+  addPolygons(fillColor = ~pal(MCV1),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  dashArray = "0.5",
+  fillOpacity = 0.7,
+  highlight = highlightOptions(
+    weight = 2,
+    color = "#666",
+    dashArray = "0.5",
+    fillOpacity = 0.7,
+    bringToFront = TRUE),
+  label = MCV1_world$ID,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto")) %>% 
+   addLegend(pal = pal, values =~MCV1_world$MCV1, opacity = 0.7, title = NULL,
+    position = "bottomright")
+  
+```
+
+
